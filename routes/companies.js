@@ -27,8 +27,6 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-module.exports = router;
-
 // Return specific company.
 router.get("/:id", async (req, res, next) => {
   try {
@@ -36,10 +34,17 @@ router.get("/:id", async (req, res, next) => {
     const results = await db.query("SELECT * FROM companies WHERE code = $1", [
       id,
     ]);
+    const invoicesResult = await db.query(
+      "SELECT id FROM invoices WHERE comp_code=$1",
+      [id]
+    );
+    let company = results.rows[0];
+    let invoices = invoicesResult.rows;
+    company.invoices = invoices.map((inv) => inv.id);
     if (results.rows.length === 0) {
       return res.status(404).send("That company can't be found.");
     }
-    return res.json({ company: results.rows[0] });
+    return res.json({ company: company });
   } catch (e) {
     return next(e);
   }
@@ -58,19 +63,6 @@ router.put("/:id", async (req, res, next) => {
       return res.status(404).send("That company can't be found.");
     }
     return res.json({ company: results.rows[0] });
-  } catch (e) {
-    return next(e);
-  }
-});
-
-// Delete specific company.
-router.delete("/:id", async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const results = await db.query("DELETE FROM companies WHERE code = $1", [
-      id,
-    ]);
-    return res.json({ status: "deleted" });
   } catch (e) {
     return next(e);
   }
